@@ -1,0 +1,75 @@
+{
+	"common": {
+		"name": "snmp_bw",
+		"version": "0.0.1",
+		"news": {
+			"0.0.1": {
+				"en": "initial release",
+				"de": "Erstveröffentlichung",
+				"ru": "Начальная версия",
+				"pt": "lançamento inicial",
+				"nl": "Eerste uitgave",
+				"fr": "Première version",
+				"it": "Versione iniziale",
+				"es": "Versión inicial",
+				"pl": "Pierwsze wydanie",
+				"zh-cn": "首次出版"
+			}
+		},
+		"titleLang": {
+			"en": "snmp_bw",
+			"de": "snmp_bw",
+			"ru": "snmp_bw",
+			"pt": "snmp_bw",
+			"nl": "snmp_bw",
+			"fr": "snmp_bw",
+			"it": "snmp_bw",
+			"es": "snmp_bw",
+			"pl": "snmp_bw",
+			"zh-cn": "snmp_bw"
+		},
+		"desc": {
+			"en": "snmp_bw",
+			"de": "snmp_bw",
+			"ru": "snmp_bw",
+			"pt": "snmp_bw",
+			"nl": "snmp_bw",
+			"fr": "snmp_bw",
+			"it": "snmp_bw",
+			"es": "snmp_bw",
+			"pl": "snmp_bw",
+			"zh-cn": "snmp_bw"
+		},
+		"authors": [
+			"bruno <b.westphal@biel-net.de>"
+		],
+		"keywords": [
+			"net"
+		],
+		"license": "MIT",
+		"platform": "Javascript/Node.js",
+		"main": "main.js",
+		"icon": "snmp_bw.png",
+		"enabled": true,
+		"extIcon": "https://raw.githubusercontent.com/bruno/ioBroker.snmp_bw/master/admin/snmp_bw.png",
+		"readme": "https://github.com/bruno/ioBroker.snmp_bw/blob/master/README.md",
+		"loglevel": "info",
+		"mode": "daemon",
+		"type": "Infrastruktur",
+		"compact": true,
+		"connectionType": "local",
+		"dataSource": "poll",
+		"materialize": true,
+		"dependencies": [
+			{
+				"js-controller": ">=2.0.0"
+			}
+		]
+	},
+	"native": {
+		"option1": true,
+		"option2": "42"
+	},
+	"objects": [],
+	"instanceObjects": []
+}
