@@ -1,167 +1,177 @@
-"use strict";
-
-/*
- * Created with @iobroker/create-adapter v1.34.1
+/**
+ *
+ * snmp adapter, Copyright CTJaeger 2017, MIT
+ *
  */
 
-// The adapter-core module gives you access to the core ioBroker functions
-// you need to create an adapter
-const utils = require("@iobroker/adapter-core");
+/* jshint -W097 */
+/* jshint strict:false */
+/* jslint node: true */
+'use strict';
 
-// Load your modules here, e.g.:
-// const fs = require("fs");
+// you have to require the utils module and call adapter function
+var utils = require('@iobroker/adapter-core'); // Get common adapter utils
+var snmp    = require('net-snmp');
 
-class SnmpBw extends utils.Adapter {
+var adapter = new utils.Adapter('snmp');
+var IPs = {};
 
-	/**
-	 * @param {Partial<utils.AdapterOptions>} [options={}]
-	 */
-	constructor(options) {
-		super({
-			...options,
-			name: "snmp_bw",
-		});
-		this.on("ready", this.onReady.bind(this));
-		this.on("stateChange", this.onStateChange.bind(this));
-		// this.on("objectChange", this.onObjectChange.bind(this));
-		// this.on("message", this.onMessage.bind(this));
-		this.on("unload", this.onUnload.bind(this));
-	}
+adapter.on('ready', main);
 
-	/**
-	 * Is called when databases are connected and adapter received configuration.
-	 */
-	async onReady() {
-		// Initialize your adapter here
+// close all opened sockets
+adapter.on('unload', function (callback) {
+    for (var ip in IPs) {
+        if (IPs.hasOwnProperty(ip) && IPs[ip].session) {
+            try {
+                IPs[ip].session.close();
+            } catch (e) {
 
-		// The adapters config (in the instance object everything under the attribute "native") is accessible via
-		// this.config:
-		this.log.info("config option1: " + this.config.option1);
-		this.log.info("config option2: " + this.config.option2);
+            }
+            IPs[ip].session = null;
+        }
+    }
+    callback && callback();
+});
 
-		/*
-		For every state in the system there has to be also an object of type state
-		Here a simple template for a boolean variable named "testVariable"
-		Because every adapter instance uses its own unique namespace variable names can't collide with other adapters variables
-		*/
-		await this.setObjectNotExistsAsync("testVariable", {
-			type: "state",
-			common: {
-				name: "testVariable",
-				type: "boolean",
-				role: "indicator",
-				read: true,
-				write: true,
-			},
-			native: {},
-		});
-
-		// In order to get state updates, you need to subscribe to them. The following line adds a subscription for our variable we have created above.
-		this.subscribeStates("testVariable");
-		// You can also add a subscription for multiple states. The following line watches all states starting with "lights."
-		// this.subscribeStates("lights.*");
-		// Or, if you really must, you can also watch all states. Don't do this if you don't need to. Otherwise this will cause a lot of unnecessary load on the system:
-		// this.subscribeStates("*");
-
-		/*
-			setState examples
-			you will notice that each setState will cause the stateChange event to fire (because of above subscribeStates cmd)
-		*/
-		// the variable testVariable is set to true as command (ack=false)
-		await this.setStateAsync("testVariable", true);
-
-		// same thing, but the value is flagged "ack"
-		// ack should be always set to true if the value is received from or acknowledged from the target system
-		await this.setStateAsync("testVariable", { val: true, ack: true });
-
-		// same thing, but the state is deleted after 30s (getState will return null afterwards)
-		await this.setStateAsync("testVariable", { val: true, ack: true, expire: 30 });
-
-		// examples for the checkPassword/checkGroup functions
-		let result = await this.checkPasswordAsync("admin", "iobroker");
-		this.log.info("check user admin pw iobroker: " + result);
-
-		result = await this.checkGroupAsync("admin", "admin");
-		this.log.info("check group user admin group admin: " + result);
-	}
-
-	/**
-	 * Is called when adapter shuts down - callback has to be called under any circumstances!
-	 * @param {() => void} callback
-	 */
-	onUnload(callback) {
-		try {
-			// Here you must clear all timeouts or intervals that may still be active
-			// clearTimeout(timeout1);
-			// clearTimeout(timeout2);
-			// ...
-			// clearInterval(interval1);
-
-			callback();
-		} catch (e) {
-			callback();
-		}
-	}
-
-	// If you need to react to object changes, uncomment the following block and the corresponding line in the constructor.
-	// You also need to subscribe to the objects with `this.subscribeObjects`, similar to `this.subscribeStates`.
-	// /**
-	//  * Is called if a subscribed object changes
-	//  * @param {string} id
-	//  * @param {ioBroker.Object | null | undefined} obj
-	//  */
-	// onObjectChange(id, obj) {
-	// 	if (obj) {
-	// 		// The object was changed
-	// 		this.log.info(`object ${id} changed: ${JSON.stringify(obj)}`);
-	// 	} else {
-	// 		// The object was deleted
-	// 		this.log.info(`object ${id} deleted`);
-	// 	}
-	// }
-
-	/**
-	 * Is called if a subscribed state changes
-	 * @param {string} id
-	 * @param {ioBroker.State | null | undefined} state
-	 */
-	onStateChange(id, state) {
-		if (state) {
-			// The state was changed
-			this.log.info(`state ${id} changed: ${state.val} (ack = ${state.ack})`);
-		} else {
-			// The state was deleted
-			this.log.info(`state ${id} deleted`);
-		}
-	}
-
-	// If you need to accept messages in your adapter, uncomment the following block and the corresponding line in the constructor.
-	// /**
-	//  * Some message was sent to this instance over message box. Used by email, pushover, text2speech, ...
-	//  * Using this method requires "common.messagebox" property to be set to true in io-package.json
-	//  * @param {ioBroker.Message} obj
-	//  */
-	// onMessage(obj) {
-	// 	if (typeof obj === "object" && obj.message) {
-	// 		if (obj.command === "send") {
-	// 			// e.g. send email or pushover or whatever
-	// 			this.log.info("send command");
-
-	// 			// Send response in callback if required
-	// 			if (obj.callback) this.sendTo(obj.from, obj.command, "Message received", obj.callback);
-	// 		}
-	// 	}
-	// }
-
+function name2id(name) {
+    return (name || '').replace(/[-\s.]+/, '_');
+}
+function processTasks(tasks, callback) {
+    if (!tasks || !tasks.length) {
+        callback && callback();
+    } else {
+        var task = tasks.shift();
+        adapter.getForeignObject(task._id, function (err, obj) {
+            if (!obj) {
+                adapter.setForeignObject(task._id, task, function (err) {
+                    setImmediate(processTasks, tasks, callback);
+                });
+            } else {
+                if (task.native.OID !== obj.native.OID || obj.common.write !== task.common.write) {
+                    obj.native = task.native;
+                    obj.common.write = task.common.write;
+                    adapter.setForeignObject(obj._id, obj, function (err) {
+                        setImmediate(processTasks, tasks, callback);
+                    });
+                } else {
+                    setImmediate(processTasks, tasks, callback);
+                }
+            }
+        });
+    }
 }
 
-if (require.main !== module) {
-	// Export the constructor in compact mode
-	/**
-	 * @param {Partial<utils.AdapterOptions>} [options={}]
-	 */
-	module.exports = (options) => new SnmpBw(options);
-} else {
-	// otherwise start the instance directly
-	new SnmpBw();
+function main() {
+    if (!adapter.config.OIDs) {
+        adapter.log.error('No OIDs found');
+        return;
+    }
+
+    adapter.config.retryTimeout   = parseInt(adapter.config.retryTimeout,   10) || 5000;
+    adapter.config.connectTimeout = parseInt(adapter.config.connectTimeout, 10) || 5000;
+    adapter.config.pollInterval   = parseInt(adapter.config.pollInterval,   10) || 30000;
+    if (adapter.config.pollInterval < 5000) {
+        adapter.config.pollInterval = 5000;
+    }
+
+    var tasks = [];
+    for (var i = 0; i < adapter.config.OIDs.length; i++) {
+        if (!adapter.config.OIDs[i].ip || !adapter.config.OIDs[i].enabled) {
+            continue;
+        }
+
+        var ip = adapter.config.OIDs[i].ip.trim();
+        var id = name2id(adapter.config.OIDs[i].name);
+
+        IPs[ip] = IPs[ip] || {oids: [], ids: [], publicCom: adapter.config.OIDs[i].publicCom};
+
+        IPs[ip].oids.push(adapter.config.OIDs[i].OID.trim().replace(/^\./, ''));
+        IPs[ip].ids.push(id);
+
+        var IPString = ip.replace(/\./gi, "_");
+
+        tasks.push({
+            _id: adapter.namespace + '.' + IPString,
+            type: 'channel',
+            common: {
+                //name:  adapter.config.OIDs[i].name,
+                //write: !!adapter.config.OIDs[i].write,
+                read:  true,
+                role: 'value'
+            },
+            native: {
+                OID: adapter.config.OIDs[i].OID
+            }
+        });
+		tasks.push({
+            _id: adapter.namespace + '.' + IPString + '.' + id,
+            type: 'state',
+            common: {
+                name:  adapter.config.OIDs[i].name,
+                write: !!adapter.config.OIDs[i].write,
+                read:  true,
+                type: 'string',
+                role: 'value'
+            },
+            native: {
+                OID: adapter.config.OIDs[i].OID
+            }
+        });
+    }
+    processTasks(tasks, readAll);
+}
+function readOids(session, ip, oids, ids) {
+    session.get(oids, function (error, varbinds) {
+            if (error) {
+                adapter.log.error('[' + ip + '] Error session.get: ' + error);
+            } else {
+                for (var i = 0; i < varbinds.length; i++) {
+                   if (snmp.isVarbindError(varbinds[i])) {
+                        adapter.log.warn(snmp.varbindError(varbinds[i]));
+                        adapter.setState(ip.replace(/\./gi, "_") + '.' +ids[i], null, true, 0x84);
+                    } else {
+                        adapter.log.debug(ip.replace(/\./gi, "_") + '.' +ids[i]);
+                        adapter.setState(ip.replace(/\./gi, "_") + '.' +ids[i], varbinds[i].value.toString(), true);
+                        adapter.setState('info.connection', true, true);
+                    }
+                }
+            }
+        });
+}
+
+function readOneDevice(ip, publicCom, oids, ids) {
+    if (IPs[ip].session) {
+        try {
+            IPs[ip].session.close();
+            adapter.setState('info.connection', false, true);
+        } catch (e) {
+            adapter.log.warn('Cannot close session: ' + e);
+        }
+        IPs[ip].session = null;
+    }
+
+    IPs[ip].session = snmp.createSession(ip, publicCom || 'public', {
+        timeout: adapter.config.connectTimeout
+    });
+    adapter.log.debug('[' + ip + '] OIDs: ' + oids.join(', '));
+
+    IPs[ip].interval = setInterval(readOids, adapter.config.pollInterval, IPs[ip].session, ip, oids, ids);
+
+    IPs[ip].session.on('close', function () {
+        IPs[ip].session = null;
+        clearInterval(IPs[ip].interval);
+        IPs[ip].interval = null;
+        setTimeout(readOneDevice, adapter.config.retryTimeout, ip, publicCom, oids, ids);
+    });
+
+    // read one time immediately
+    readOids(IPs[ip].session, ip, oids, ids);
+}
+
+function readAll() {
+    for (var ip in IPs) {
+        if (IPs.hasOwnProperty(ip))  {
+            readOneDevice(ip, IPs[ip].publicCom, IPs[ip].oids, IPs[ip].ids);
+        }
+    }
 }
